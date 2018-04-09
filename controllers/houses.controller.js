@@ -3,13 +3,66 @@ const House = require('../models/houses.model');
 const ApiError = require('../models/api.error.model');
 const RESULTLIMIT = 50;
 
-module.exports.list = (req, res, next) => {
-    const criteria = {};
+function FiltersArrayGenerator (keys, values, length) {
+    var filterArray = [];
+    for ( let i = 0; i < length; i++){
+        filterArray.push(FilterJsonGenerator(keys[i], values[i]));
+    };
+    console.log(filterArray);
+    return filterArray;
+}
 
-    House.find(criteria)
-    .limit(RESULTLIMIT)  
-    .then(houses => res.json(houses))
-    .catch(error => next(error));
+function FilterJsonGenerator(key, value) {
+    queryString = ` {"${key}": "${value}" } `;
+    console.log(queryString);
+
+    queryObject = JSON.parse(queryString);
+    console.log(queryObject);
+    return queryObject;
+
+};
+
+module.exports.list = (req, res, next) => {
+    const criteria = req.query;
+    const criteriaKeyArr = Object.keys(criteria);
+    const criteriaValArr = Object.values(criteria);
+    const countFilters = criteriaValArr.length;
+
+    console.log(`array length = ${countFilters}`)
+
+    //Find all
+    if(!countFilters) {
+        House.find()
+        .limit(RESULTLIMIT)  
+        .then(houses => res.json(houses))
+        .catch(error => next(error));
+    } else {
+
+        //Find by Zipcode
+        if(countFilters<10) {
+            if(criteria.zipcode) {
+                myCriteria = { 'zipcode': criteria.zipcode, 'availablity':criteria.zipcode};
+                House.find(criteria)
+                .limit(RESULTLIMIT)  
+                .then(houses => res.json(houses))
+                .catch(error => next(error));
+            }         
+            //Find by Municipality
+            if(criteria.municipality) {
+                House.find({ 'municipality': criteria.municipality} )
+                .limit(RESULTLIMIT)  
+                .then(houses => res.json(houses))
+                .catch(error => next(error));
+            }            
+        }else{
+            House.find( { $and: 
+                FiltersArrayGenerator(Object.keys(criteria), Object.values(criteria), Object.values(criteria).length)
+            })
+           .limit(RESULTLIMIT)  
+           .then(houses => res.json(houses))
+           .catch(error => next(error));
+        }
+    }
 };
 
 module.exports.get = (req, res, next) => {
@@ -65,7 +118,6 @@ module.exports.destroy = (req, res, next) => {
         } else {
           next(new ApiError(`Card not found`, 404));
         }
-      }).catch(error => next(error));
-  };
-
+    }).catch(error => next(error));
+};
 
