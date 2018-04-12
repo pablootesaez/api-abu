@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const NodeGeocoder = require('node-geocoder');
+const options = { provider: 'google', httpAdapter: 'https', apiKey: 'AIzaSyDOIfy-xL37YXE3HWpsBXh0BScBAtD7Vwo', formatter: null };
+const geocoder = NodeGeocoder(options);
 
 const houseSchema = new mongoose.Schema({
    
@@ -8,14 +11,14 @@ const houseSchema = new mongoose.Schema({
 
     zipcode: {
         type: Number,
-        required: true
+        // required: true
         // validate: "/^[00..52]{2}[0-9]{3}$/g" --> NO FUNCIONA!!!
     },
     municipality: {
         type:String,
-        required: true
+        // required: true
     },    
-    streetAndNumber: {
+    address: {
         type: String,
         // required: true
     },
@@ -23,25 +26,25 @@ const houseSchema = new mongoose.Schema({
         type:String,
         // required: true
     },
-    autCom: {
+    country: {
         type:String,
-        // required: true
+        default: "ES"
     },
-    location : {
+    location: {
         type: { 
             type: String,
-            default: 'Point'
-        },
-        coordinates: [Number],
+            default: "Point"
+         },
+        coordinates: [Number]
     },
-    name: {
+    houseName: {
         type: String,
-        required: true
+        // required: true
     },
 
-    availablity: {
+    availability: {
         type: Boolean,
-        required: true
+        // required: true
     },
 
         //Description
@@ -359,6 +362,31 @@ const houseSchema = new mongoose.Schema({
 
 });
 
-// userSchema.index({ "general.address.location": "2dsphere" });
+houseSchema.pre('save', function (next) {
+    const house = this;
+
+    // DOC npm: https://www.npmjs.com/package/node-geocoder
+    // DOC Google: https://developers.google.com/maps/documentation/geocoding/intro?hl=es-419
+
+  geocoder.geocode({
+        address: house.address,
+        countryCode: house.country,
+        postal_code: house.zipcode
+  })
+  .then(res => {
+        house.location.coordinates[0] = res[0].longitude;
+        house.location.coordinates[1] = res[0].latitude;
+        next();
+    })
+  .catch(function(err) {
+        console.log(err);
+        next();
+  });
+
+});
+
+
+
+houseSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model('House', houseSchema);

@@ -3,66 +3,31 @@ const House = require('../models/houses.model');
 const ApiError = require('../models/api.error.model');
 const RESULTLIMIT = 50;
 
-function FiltersArrayGenerator (keys, values, length) {
-    var filterArray = [];
-    for ( let i = 0; i < length; i++){
-        filterArray.push(FilterJsonGenerator(keys[i], values[i]));
+function criteriaValidator(criteria) {
+    if (criteria.houseMinPrice) {
+        const minPrice = criteria.houseMinPrice;
+        criteria.houseMinPrice = { $gte: minPrice };
     };
-    console.log(filterArray);
-    return filterArray;
+    if (criteria.houseMaxPrice) {
+        const maxPrice = criteria.houseMaxPrice;
+        criteria.houseMaxPrice = { $lte: maxPrice };
+    };
+    if (criteria.name) {
+        const name = criteria.name;
+        criteria.name = { $regex: name, $options: 'ix' };
+    };
+    return criteria;
 }
 
-function FilterJsonGenerator(key, value) {
-    queryString = ` {"${key}": "${value}" } `;
-    console.log(queryString);
-
-    queryObject = JSON.parse(queryString);
-    console.log(queryObject);
-    return queryObject;
-
-};
-
 module.exports.list = (req, res, next) => {
-    const criteria = req.query;
-    const criteriaKeyArr = Object.keys(criteria);
-    const criteriaValArr = Object.values(criteria);
-    const countFilters = criteriaValArr.length;
+    var criteria = req.query;
 
-    console.log(`array length = ${countFilters}`)
+    criteria = criteriaValidator(criteria);
 
-    //Find all
-    if(!countFilters) {
-        House.find()
-        .limit(RESULTLIMIT)  
-        .then(houses => res.json(houses))
-        .catch(error => next(error));
-    } else {
-
-        //Find by Zipcode
-        if(countFilters<10) {
-            if(criteria.zipcode) {
-                myCriteria = { 'zipcode': criteria.zipcode, 'availablity':criteria.zipcode};
-                House.find(criteria)
-                .limit(RESULTLIMIT)  
-                .then(houses => res.json(houses))
-                .catch(error => next(error));
-            }         
-            //Find by Municipality
-            if(criteria.municipality) {
-                House.find({ 'municipality': criteria.municipality} )
-                .limit(RESULTLIMIT)  
-                .then(houses => res.json(houses))
-                .catch(error => next(error));
-            }            
-        }else{
-            House.find( { $and: 
-                FiltersArrayGenerator(Object.keys(criteria), Object.values(criteria), Object.values(criteria).length)
-            })
-           .limit(RESULTLIMIT)  
-           .then(houses => res.json(houses))
-           .catch(error => next(error));
-        }
-    }
+    House.find(criteria)
+    .limit(RESULTLIMIT)  
+    .then(houses => res.json(houses))
+    .catch(error => next(error));
 };
 
 module.exports.get = (req, res, next) => {
@@ -80,7 +45,7 @@ module.exports.get = (req, res, next) => {
 
 module.exports.create = (req, res, next) => {
     var newHouse = new House(req.body);
-
+    
     newHouse.save()
     .then(()=> {
         res.status(201).json(newHouse);
