@@ -57,7 +57,7 @@ module.exports.create = (req, res, next) => {
         } else {
           next(new ApiError(error.message, 500));
         }
-    });
+    }); 
 };
 
 module.exports.update = (req, res, next) => {

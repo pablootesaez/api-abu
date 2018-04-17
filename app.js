@@ -17,6 +17,8 @@ require('./configs/passport.config').setup(passport);
 const housesRouter = require('./routes/houses.routes');
 const usersRouter = require('./routes/users.routes');
 const sessionRouter = require('./routes/session.routes');
+const contactsRouter = require('./routes/contacts.routes');
+const mailsRouter = require('./routes/mails.routes');
 
 const app = express();
 
@@ -57,8 +59,8 @@ app.use((req, res, next) => {
 app.use('/houses', housesRouter);
 app.use('/users', usersRouter);
 app.use('/session', sessionRouter);
-
-
+app.use('/contacts', contactsRouter);
+app.use('/mails', mailsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
